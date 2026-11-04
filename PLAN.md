@@ -1,4 +1,4 @@
-# add-crm skill — Plan (draft v0)
+# add-crm skill — Plan (draft v1)
 
 ## Goal
 A Claude Code skill (`/add-crm`) that, run inside any project (Races, Melio, …), interviews the user,
@@ -60,6 +60,26 @@ CRM skill/
   docs/cloudflare-setup.md
 ```
 
+## Install modes
+- **User level** (`~/.claude/skills/add-crm`): `/add-crm` is available in every project.
+- **Project level** (`<project>/.claude/skills/add-crm`): pinned to one project and committed with it.
+- Both modes register the project's CRM with the Master CRM (if one exists).
+
+## Master CRM (user level)
+One hub that lists every project CRM (project A, project B, ...) and switches between them in one click.
+- **Created by:** `/add-crm master` (or offered on the first `/add-crm` run). It's a small Hono + React Worker
+  with its own D1, deployed to the user's Cloudflare account.
+- **Registry:** each project CRM registers itself (name, URL, logo/color, env: prod/beta) via a signed
+  registration call. The local copy lives in `~/.claude/crm-master/registry.json`.
+- **Switcher:** an app-launcher menu (Salesforce-style) in the master and in every project CRM's header;
+  one click opens the other CRM already signed in.
+- **Single sign-on:** the master issues short-lived signed tokens (JWT, ~60s, single use); each project CRM verifies
+  the token with the master's public key and creates its own session. Every project keeps its own users,
+  roles and data. The master only knows the user's identity and which CRMs they can reach.
+- **Master home page:** a cross-project summary (open pipeline, new leads, open cases per CRM) pulled from each
+  CRM's read-only summary endpoint. No data is copied between projects.
+- **Security:** each CRM is admitted to the registry only with an admin-approved key; tokens are scoped to a single CRM
+  (audience claim); revoking a CRM removes it from the switcher.
+
 ## Open questions
-- Skill name: `add-crm`?
-- Install target: user-level (`~/.claude/skills`) or per-project?
+- CRM sign-in: reuse the host project's existing user accounts, or separate CRM accounts that an admin invites?
