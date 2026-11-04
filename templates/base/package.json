@@ -1,0 +1,32 @@
+{
+  "name": "crm",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite build && wrangler dev",
+    "dev:web": "vite",
+    "build": "vite build",
+    "deploy": "vite build && wrangler deploy",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "seed:admin": "node scripts/seed-admin.mjs"
+  },
+  "dependencies": {
+    "hono": "4.6.14",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.28.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20241218.0",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.3.4",
+    "typescript": "5.7.2",
+    "vite": "5.4.11",
+    "vitest": "2.1.8",
+    "wrangler": "3.99.0"
+  }
+}
