@@ -31,6 +31,11 @@ Scan the project and build a findings summary. Look for:
 - **Email:** Resend, SendGrid, Postmark, SES, Mailgun, nodemailer. Record the **env var name** only (e.g. `RESEND_API_KEY`).
 - **Business signals:** README, landing page copy, pricing pages — to infer B2B/B2C and the sales motion.
 
+**Scan depth: schema plus aggregates.** Read tables, columns, types, primary/foreign keys and indexes, then only
+aggregate facts: row counts and, per column, the value type and number of distinct values (low-cardinality text
+columns are picklist candidates). Never read or print raw rows, and skip columns that look personal or secret
+(email, phone, password, token, key, address) beyond noting that they exist. Everything that follows uses these facts.
+
 Show the user a short summary, e.g.:
 > Found: Next.js on Vercel · Postgres via Prisma: `User` (12 cols), `Organization`, `Subscription` · Resend via `RESEND_API_KEY` · B2B SaaS signals in README.
 
@@ -44,6 +49,16 @@ to Phase 3 without waiting:
 
 When it returns, present the patterns as **suggestions** at the point they're relevant (data mapping, stages).
 The user decides.
+
+## Phase 2b — Propose custom objects
+Follow `docs/custom-objects.md`. From the schema scan, list the host tables that do **not** map onto a standard
+object (Lead, Account, Contact, Opportunity, Case, Task) and propose them as **custom objects**, ranked by CRM
+value (row count, links to customers, status or amount columns). Show a ranked list, then a text diagram of the
+relationships to the standard objects. For each candidate give: source table, why it matters, proposed fields,
+the relationship type and its parent. The user accepts, edits or rejects each; nothing is created without that.
+Supported relationship types: lookup (many-to-one), master-detail (cascade delete, inherits visibility),
+many-to-many through a junction object, and activity links (tasks and timeline entries on any object).
+Record the result in `CRM/crm.config.json` → `customObjects` and `relationships`.
 
 ## Phase 3 — Interview (use AskUserQuestion, ≤4 questions per call)
 Ask in this order; skip questions discovery already answered. Put the recommended option first.
@@ -71,6 +86,11 @@ Typical defaults (adapt to the research findings):
 | subscriptions / paid orders | Opportunities (Closed Won) | Opportunities (Closed Won) |
 | support tickets | Cases | Cases |
 Record the result in `CRM/crm.config.json` → `mapping`.
+
+**3c-2. Custom objects** — confirm the Phase 2b proposals and ask about anything the scan cannot tell:
+which custom objects should be visible to which roles, and which one (if any) deserves its own pipeline or stage bar.
+Custom-object data follows the DB strategy chosen in 3b (import script for a separate DB; views or `crm_` tables
+for an existing DB).
 
 **3d. Pipeline stages** — propose stages (from research or defaults:
 Prospecting → Qualification → Proposal → Negotiation → Closed Won / Closed Lost).
@@ -103,7 +123,9 @@ yourself once they're logged in.
 1. Copy `templates/base` → `<root>/CRM`. Rename `wrangler.toml.tmpl` → `wrangler.toml` and fill in
    `{{CRM_NAME}}`, `{{D1_DATABASE_ID}}`, `{{BRAND_COLOR}}`.
 2. Write `CRM/crm.config.json` with all interview answers (no secrets).
-3. Apply the pipeline stages to `src/api/objects.ts` (`STAGES`).
+3. Apply the pipeline stages to `src/api/objects.ts` (`STAGES`) and add each accepted custom object and its
+   relationships to `OBJECTS` plus a migration. Only lookup is supported by the v1 template; for the other relationship
+   types tell the user they are planned (see `docs/custom-objects.md`) and don't fake them.
 4. Data mapping:
    - **Separate DB:** write an import script `CRM/scripts/import-from-host.ts` (idempotent, upserts by `external_id`).
    - **Existing DB, new tables:** generate migrations that create the `crm_` tables in the host DB and SQL **views**
