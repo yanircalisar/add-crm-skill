@@ -10,7 +10,8 @@ then scaffolds a Salesforce-style CRM in `<project>/CRM` (created if missing), b
 | Stack | Hono API + React SPA on Cloudflare Workers |
 | Relation to host | Code lives in `/CRM`; data strategy decided per project after a scan (see Discovery) |
 | Database | Reuse host DB if the user agrees; otherwise Cloudflare D1 (default) in v1. Supabase / Neon (Postgres via Hyperdrive) planned for v2 |
-| Look & feel | Salesforce Lightning-style layout/UX, own neutral brand (no Salesforce logos/trademarks) |
+| Look & feel | User picks a style: Salesforce-style, HubSpot-style or neutral. Layout/vocabulary only, own brand, no vendor names/logos/fonts/icons/code (see docs/legal-and-sources.md) |
+| Setup time | Goal: a few minutes. `/add-crm quick` asks only style, name and admin email |
 | Auth | Asked per project (reuse host logins or separate CRM accounts); default: email + password, admin invites, sessions in D1, HttpOnly/Secure/SameSite=Strict cookies |
 | Access control | Roles (Admin/Manager/Rep) + profiles (object permissions) + record ownership |
 | Email provider | Reuse host's existing provider/token if found (with permission); else Resend |
