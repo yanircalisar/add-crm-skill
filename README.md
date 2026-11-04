@@ -41,7 +41,7 @@ Open Claude Code in your project and type:
 ```
 In a hurry? `/add-crm quick` asks only for the style, a name and your admin email.
 The skill will:
-1. Scan your project: framework, database, existing users and customers, email provider
+1. Scan your project: framework, database (schema and counts only), existing users and customers, email provider, and suggest custom objects with their links to the standard ones
 2. Ask about your business, how to use your existing data, pipeline stages, sign-in and branding.
    In the background it looks up how similar companies set up their CRM and suggests those patterns
 3. Guide you through Cloudflare setup (see [docs/cloudflare-setup.md](docs/cloudflare-setup.md))
@@ -53,6 +53,7 @@ It never changes your existing database, secrets or code outside `/CRM` without 
 Version 1. **Working:** everything under "What you get".
 
 **Not built yet:**
+- Custom-object relationships beyond lookup (master-detail, many-to-many, activity links), see [docs/custom-objects.md](docs/custom-objects.md)
 - Optional modules: email & marketing automation, personal emails, sales insights, social media
 - Linking to or importing from your project's existing database (the skill asks the questions; generating the views/import is next)
 - Postgres support (Supabase, Neon)
