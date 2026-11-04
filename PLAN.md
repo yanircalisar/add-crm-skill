@@ -11,7 +11,7 @@ then scaffolds a Salesforce-style CRM in `<project>/CRM` (created if missing), b
 | Relation to host | Code lives in `/CRM`; data strategy decided per project after a scan (see Discovery) |
 | Database | Reuse host DB if the user agrees; otherwise Cloudflare D1 (default) in v1. Supabase / Neon (Postgres via Hyperdrive) planned for v2 |
 | Look & feel | Salesforce Lightning-style layout/UX, own neutral brand (no Salesforce logos/trademarks) |
-| Auth | Email + password, admin invites, sessions in D1, HttpOnly/Secure/SameSite=Strict cookies |
+| Auth | Asked per project (reuse host logins or separate CRM accounts); default: email + password, admin invites, sessions in D1, HttpOnly/Secure/SameSite=Strict cookies |
 | Access control | Roles (Admin/Manager/Rep) + profiles (object permissions) + record ownership |
 | Email provider | Reuse host's existing provider/token if found (with permission); else Resend |
 
@@ -41,7 +41,10 @@ Cases, Reports & Dashboards.
 6. **Salesforce use-case research (in parallel, while the user answers):** a background agent searches public Salesforce
    customer stories and Trailhead/implementation guides for similar businesses (e.g. B2B SaaS payments, event/races platforms)
    and returns 2-3 concrete patterns (object model, stages, automations). These are presented as suggestions; the user picks.
-7. **Email — ask:** if an existing provider/token is found, ask permission to reuse it; then wire the same env var into the
+7. **CRM sign-in — ask (per project):** if the project already has user accounts, offer:
+   (a) separate CRM accounts invited by an admin (default), or (b) reuse the project's existing logins, limited to
+   users the admin allows into the CRM. With (b), CRM roles/permissions are still stored and managed by the CRM.
+8. **Email — ask:** if an existing provider/token is found, ask permission to reuse it; then wire the same env var into the
    CRM's Worker secrets (`wrangler secret put`) without echoing the value.
 
 ## Skill flow
@@ -82,4 +85,4 @@ One hub that lists every project CRM (project A, project B, ...) and switches be
   (audience claim); revoking a CRM removes it from the switcher.
 
 ## Open questions
-- CRM sign-in: reuse the host project's existing user accounts, or separate CRM accounts that an admin invites?
+- None blocking. Next step: write SKILL.md and the base templates.
