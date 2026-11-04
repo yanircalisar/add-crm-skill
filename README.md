@@ -1,4 +1,4 @@
-# add-crm
+# add-crm-skill
 
 A [Claude Code](https://claude.com/claude-code) skill that adds a Salesforce-style CRM to a project you already have.
 Run `/add-crm` inside the project. It looks at your code and data, asks how your business works, then builds a CRM
@@ -25,11 +25,11 @@ in a `/CRM` folder that runs on your own Cloudflare account.
 ## Install
 User level (available in every project):
 ```bash
-git clone https://github.com/yanircalisar/add-crm ~/.claude/skills/add-crm
+git clone https://github.com/yanircalisar/add-crm-skill ~/.claude/skills/add-crm
 ```
 Or project level (only this project):
 ```bash
-git clone https://github.com/yanircalisar/add-crm .claude/skills/add-crm
+git clone https://github.com/yanircalisar/add-crm-skill .claude/skills/add-crm
 ```
 
 ## Use
