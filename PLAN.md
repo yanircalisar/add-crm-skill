@@ -1,7 +1,7 @@
 # add-crm skill — Plan (draft v1)
 
 ## Goal
-A Claude Code skill (`/add-crm`) that, run inside any project (Races, Melio, …), interviews the user,
+A Claude Code skill (`/add-crm`) that, run inside any existing project, interviews the user,
 then scaffolds a Salesforce-style CRM in `<project>/CRM` (created if missing), backed by the user's own database.
 
 ## Decisions so far
