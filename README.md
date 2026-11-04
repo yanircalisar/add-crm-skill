@@ -4,14 +4,16 @@ A [Claude Code](https://claude.com/claude-code) skill that adds a Salesforce-sty
 Run `/add-crm` inside the project. It looks at your code and data, asks how your business works, then builds a CRM
 in a `/CRM` folder that runs on your own Cloudflare account.
 
-> Not affiliated with Salesforce. The CRM follows a familiar layout but uses your own name and colors.
+> Not affiliated with Salesforce. The CRM is built with the open-source [Salesforce Lightning Design System](https://www.lightningdesignsystem.com/),
+> so it looks and feels like Lightning, but it carries your own name and logo. See [NOTICE.md](NOTICE.md).
 
 ## What you get
 - **Records:** Leads (with conversion), Accounts, Contacts, Opportunities, Cases, Tasks, and an activity timeline
 - **Screens:** list views with search and sorting, record pages with a stage bar and related lists, a drag-and-drop
   pipeline board, and a home dashboard
 - **User management:** invite users by link, roles (Admin, Manager, Rep), per-role permissions, and reps see only their own records
-- Works on mobile, supports dark mode
+- Lightning look: app launcher, object icons, path (stage bar), highlights panel, activity timeline, kanban
+- Works on mobile
 - Built with Hono + React on Cloudflare Workers, with a Cloudflare D1 database
 
 ## Requirements

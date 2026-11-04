@@ -122,5 +122,7 @@ Until it ships, record each project CRM in `~/.claude/crm-master/registry.json`
 ## Rules
 - Exact dependency versions only. Don't add packages beyond the template without asking.
 - No secrets in code or `crm.config.json`; use `wrangler secret put` and `.dev.vars` (gitignored).
-- Salesforce-like layout and UX, but never Salesforce's name, logos or trademarks in the generated UI.
+- The UI uses the Salesforce Lightning Design System (installed from npm, see NOTICE.md) so it looks like Lightning,
+  but never put Salesforce's name, logo or trademarks in the generated UI. Use the CRM name and brand color from 3h.
+- Keep `NOTICE.md` (SLDS license and attribution) next to the generated CRM: copy it to `CRM/NOTICE.md`.
 - Report at the end: what was created, which DB strategy, the mapping, pending modules, and next steps.

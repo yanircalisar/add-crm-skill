@@ -1,6 +1,32 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../api";
+import { ErrorAlert } from "../Icon";
+
+function AuthCard({ title, children, onSubmit }: { title: string; children: React.ReactNode; onSubmit: (e: React.FormEvent) => void }) {
+  return (
+    <div className="crm-auth">
+      <div className="crm-auth__inner">
+        <div className="crm-logo crm-logo_large slds-m-bottom_large" aria-hidden="true" />
+        <form className="slds-card slds-p-around_large" onSubmit={onSubmit}>
+          <h1 className="slds-text-heading_medium slds-m-bottom_medium">{title}</h1>
+          {children}
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function Input({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div className="slds-form-element slds-m-bottom_medium">
+      <label className="slds-form-element__label" htmlFor={props.id}>{label}</label>
+      <div className="slds-form-element__control">
+        <input className="slds-input" {...props} />
+      </div>
+    </div>
+  );
+}
 
 export function Login({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState("");
@@ -23,15 +49,12 @@ export function Login({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className="auth">
-      <form className="card auth-card" onSubmit={submit}>
-        <h1>Log in</h1>
-        <label>Email<input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-        <label>Password<input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-        {error && <p className="error" role="alert">{error}</p>}
-        <button className="btn btn-brand" disabled={busy}>{busy ? "Logging in…" : "Log in"}</button>
-      </form>
-    </div>
+    <AuthCard title="Log In" onSubmit={submit}>
+      {error && <ErrorAlert message={error} />}
+      <Input id="email" label="Username" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+      <Input id="password" label="Password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+      <button className="slds-button slds-button_brand slds-button_stretch" disabled={busy}>{busy ? "Logging in…" : "Log In"}</button>
+    </AuthCard>
   );
 }
 
@@ -60,14 +83,11 @@ export function AcceptInvite({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className="auth">
-      <form className="card auth-card" onSubmit={submit}>
-        <h1>Set your password</h1>
-        <label>New password (min. 10 characters)<input type="password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-        <label>Confirm password<input type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} /></label>
-        {error && <p className="error" role="alert">{error}</p>}
-        <button className="btn btn-brand" disabled={busy}>{busy ? "Saving…" : "Save and log in"}</button>
-      </form>
-    </div>
+    <AuthCard title="Set Your Password" onSubmit={submit}>
+      {error && <ErrorAlert message={error} />}
+      <Input id="new-password" label="New Password (min. 10 characters)" type="password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} />
+      <Input id="confirm-password" label="Confirm Password" type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+      <button className="slds-button slds-button_brand slds-button_stretch" disabled={busy}>{busy ? "Saving…" : "Save and Log In"}</button>
+    </AuthCard>
   );
 }

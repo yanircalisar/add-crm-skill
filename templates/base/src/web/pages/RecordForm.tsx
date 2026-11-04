@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { api, ApiError, recordName, type ObjectDef, type Field } from "../api";
 import { useMeta } from "../App";
+import { UtilityIcon, ErrorAlert } from "../Icon";
 
-/** Modal used for New and Edit, like a Lightning record form. */
+/** New / Edit record modal, like a Lightning record form. */
 export function RecordForm({
   object, def, record, defaults, onClose, onSaved,
 }: {
@@ -21,10 +22,11 @@ export function RecordForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    dialog.current?.showModal();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   const submit = async (e: React.FormEvent) => {
@@ -42,29 +44,48 @@ export function RecordForm({
       }
     } catch (err) {
       if (err instanceof ApiError && err.fields) setErrors(err.fields);
-      setError((err as Error).message);
+      setError(err instanceof ApiError && err.fields ? "Review the errors on this page." : (err as Error).message);
     } finally {
       setBusy(false);
     }
   };
 
+  const title = record ? `Edit ${recordName(def, record)}` : `New ${def.label}`;
+
   return (
-    <dialog ref={dialog} className="modal" onClose={onClose} aria-labelledby="form-title">
-      <form onSubmit={submit}>
-        <h2 id="form-title">{record ? `Edit ${recordName(def, record)}` : `New ${def.label}`}</h2>
-        <div className="form-grid">
-          {def.fields.map((f) => (
-            <FieldInput key={f.name} field={f} value={values[f.name]} error={errors[f.name]}
-              onChange={(v) => setValues((s) => ({ ...s, [f.name]: v }))} />
-          ))}
-        </div>
-        {error && <p className="error" role="alert">{error}</p>}
-        <div className="modal-actions">
-          <button type="button" className="btn" onClick={() => dialog.current?.close()}>Cancel</button>
-          <button className="btn btn-brand" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
-        </div>
-      </form>
-    </dialog>
+    <>
+      <section role="dialog" tabIndex={-1} aria-modal="true" aria-labelledby="form-title" className="slds-modal slds-fade-in-open slds-modal_medium">
+        <form className="slds-modal__container" onSubmit={submit} noValidate>
+          <button type="button" className="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" onClick={onClose} title="Close">
+            <UtilityIcon name="close" className="slds-button__icon slds-button__icon_large" label="Cancel and close" />
+          </button>
+          <div className="slds-modal__header">
+            <h1 id="form-title" className="slds-modal__title slds-hyphenate">{title}</h1>
+          </div>
+          <div className="slds-modal__content slds-p-around_medium">
+            {error && <ErrorAlert message={error} />}
+            <h3 className="slds-section__title slds-theme_shade slds-p-horizontal_small slds-m-bottom_small">
+              <span className="slds-truncate">{def.label} Information</span>
+            </h3>
+            <div className="slds-form" role="list">
+              <div className="slds-grid slds-wrap slds-gutters_small">
+                {def.fields.map((f) => (
+                  <div key={f.name} className={`slds-col slds-size_1-of-1 ${f.type === "textarea" ? "" : "slds-medium-size_1-of-2"}`} role="listitem">
+                    <FieldInput field={f} value={values[f.name]} error={errors[f.name]}
+                      onChange={(v) => setValues((s) => ({ ...s, [f.name]: v }))} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="slds-modal__footer">
+            <button type="button" className="slds-button slds-button_neutral" onClick={onClose}>Cancel</button>
+            <button className="slds-button slds-button_brand" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
+          </div>
+        </form>
+      </section>
+      <div className="slds-backdrop slds-backdrop_open" role="presentation" />
+    </>
   );
 }
 
@@ -74,24 +95,29 @@ function FieldInput({ field, value, error, onChange }: { field: Field; value: an
   let input: React.ReactNode;
   if (field.type === "picklist") {
     input = (
-      <select {...common} onChange={(e) => onChange(e.target.value)}>
-        {!field.required && <option value="">--None--</option>}
-        {field.options?.map((o) => <option key={o}>{o}</option>)}
-      </select>
+      <div className="slds-select_container">
+        <select className="slds-select" {...common} onChange={(e) => onChange(e.target.value)}>
+          {!field.required && <option value="">--None--</option>}
+          {field.options?.map((o) => <option key={o}>{o}</option>)}
+        </select>
+      </div>
     );
   } else if (field.type === "textarea") {
-    input = <textarea {...common} rows={4} onChange={(e) => onChange(e.target.value)} />;
+    input = <textarea className="slds-textarea" {...common} rows={4} onChange={(e) => onChange(e.target.value)} />;
   } else if (field.type === "lookup") {
-    input = <LookupInput object={field.lookup!} {...common} onChange={onChange} />;
+    input = <LookupInput object={field.lookup!} id={id} value={value} onChange={onChange} />;
   } else {
     const type = { email: "email", phone: "tel", url: "url", number: "number", currency: "number", date: "date" }[field.type] ?? "text";
-    input = <input {...common} type={type} step={field.type === "currency" ? "0.01" : undefined} onChange={(e) => onChange(e.target.value)} />;
+    input = <input className="slds-input" {...common} type={type} step={field.type === "currency" ? "0.01" : undefined} onChange={(e) => onChange(e.target.value)} />;
   }
   return (
-    <div className={`field ${field.type === "textarea" ? "span-2" : ""}`}>
-      <label htmlFor={id}>{field.required && <abbr title="required" className="req">*</abbr>}{field.label}</label>
-      {input}
-      {error && <p id={`${id}-err`} className="error">{error}</p>}
+    <div className={`slds-form-element slds-form-element_stacked ${error ? "slds-has-error" : ""}`}>
+      <label className="slds-form-element__label" htmlFor={id}>
+        {field.required && <abbr className="slds-required" title="required">* </abbr>}
+        {field.label}
+      </label>
+      <div className="slds-form-element__control">{input}</div>
+      {error && <div className="slds-form-element__help" id={`${id}-err`}>{error}</div>}
     </div>
   );
 }
@@ -104,11 +130,13 @@ function LookupInput({ object, id, value, onChange }: { object: string; id: stri
     if (!def) return;
     api<{ records: Record<string, any>[] }>(`/o/${object}?limit=100&sort=${def.nameFields[0]}&dir=asc`).then((r) => setOptions(r.records)).catch(() => {});
   }, [object]);
-  if (!def) return <input id={id} disabled value="" />;
+  if (!def) return <input id={id} className="slds-input" disabled value="" />;
   return (
-    <select id={id} value={value ?? ""} onChange={(e) => onChange(e.target.value)}>
-      <option value="">--None--</option>
-      {options.map((o) => <option key={o.id} value={o.id}>{recordName(def, o)}</option>)}
-    </select>
+    <div className="slds-select_container">
+      <select id={id} className="slds-select" value={value ?? ""} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Search {def.plural}...</option>
+        {options.map((o) => <option key={o.id} value={o.id}>{recordName(def, o)}</option>)}
+      </select>
+    </div>
   );
 }
