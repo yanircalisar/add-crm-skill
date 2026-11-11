@@ -9,7 +9,7 @@ Adopted third-party design assets (installed from npm, not copied into this repo
   https://github.com/salesforce-ux/design-system
   License: BSD-3-Clause, Copyright (c) Salesforce.com, inc.
   We use: the CSS stylesheet only. We do NOT use its icons (CC BY-ND 4.0) or fonts; the CRM uses its own icons
-  (templates/base/src/web/Icon.tsx) and system fonts.
+  (skills/add-crm/templates/base/src/web/Icon.tsx) and system fonts.
 
 Data model: object names, field names, ID format and the security model follow the public concepts of the
 Salesforce Object Reference (https://developer.salesforce.com/docs/platform/object-reference/guide).

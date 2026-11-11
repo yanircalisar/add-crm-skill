@@ -1,0 +1,14 @@
+{
+  "name": "add-crm-skill",
+  "owner": { "name": "Yanir Calisar", "url": "https://github.com/yanircalisar" },
+  "description": "The add-crm plugin: a Salesforce-style CRM for your own projects.",
+  "plugins": [
+    {
+      "name": "add-crm",
+      "source": "./",
+      "description": "Add a Salesforce-style CRM to an existing project, running on your own Cloudflare account.",
+      "category": "productivity",
+      "tags": ["crm", "salesforce", "cloudflare"]
+    }
+  ]
+}
