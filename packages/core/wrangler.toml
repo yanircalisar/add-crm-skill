@@ -1,0 +1,19 @@
+# Local development of the package itself (not used by projects).
+name = "add-crm-core-dev"
+main = "dev/worker.ts"
+compatibility_date = "2024-12-01"
+
+[assets]
+directory = "./dist/web"
+not_found_handling = "single-page-application"
+binding = "ASSETS"
+
+[vars]
+CRM_NAME = "CRM (dev)"
+BRAND_COLOR = "#0176d3"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "crm-dev"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "dev/migrations"

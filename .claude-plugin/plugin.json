@@ -1,6 +1,6 @@
 {
   "name": "add-crm",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "Add a Salesforce-style CRM (Salesforce data model, Lightning-style UI, user management) to an existing project, running on your own Cloudflare account.",
   "author": { "name": "Yanir Calisar", "url": "https://github.com/yanircalisar" },
   "homepage": "https://github.com/yanircalisar/add-crm-skill",

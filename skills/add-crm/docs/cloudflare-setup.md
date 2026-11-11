@@ -32,9 +32,9 @@ npx wrangler secret put RESEND_API_KEY   # only if email is enabled; reuse the h
 
 ## 5. Migrate, seed, deploy
 ```bash
-npm run db:migrate:local && npm run dev          # local check
-npm run db:migrate:remote && npm run deploy      # production, after approval
-npm run seed:admin -- you@example.com            # one-time invite link for the first admin
+npm run dev                                      # local check (writes and applies migrations, then serves)
+npm run deploy                                   # production, after approval (applies migrations first)
+npm run seed:admin -- you@example.com            # one-time invite link for the first admin (add --remote for production)
 ```
 
 ## Troubleshooting

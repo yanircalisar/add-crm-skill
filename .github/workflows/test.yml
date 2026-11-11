@@ -3,17 +3,58 @@ on:
   push:
   pull_request:
 jobs:
-  template:
+  core:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: skills/add-crm/templates/base
+        working-directory: packages/core
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
+      - name: No vendor images or fonts in the package
+        run: |
+          if ls dist/web/assets | grep -vE '\.(js|css)$'; then echo "Unexpected files in dist/web"; exit 1; fi
+          if grep -qE 'url\((["'\'']?)(/|data:)' dist/web/assets/*.css; then echo "Image reference left in CSS"; exit 1; fi
+      - run: npm pack --pack-destination ..
+      - uses: actions/upload-artifact@v4
+        with:
+          name: core-tarball
+          path: packages/add-crm-core-*.tgz
+
+  # A project generated from the template, using the package built above.
+  template:
+    needs: core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: core-tarball
+          path: tarball
+      - name: Template pins the current core version
+        run: |
+          core=$(node -p "require('./packages/core/package.json').version")
+          pin=$(node -p "require('./skills/add-crm/templates/base/package.json').dependencies['add-crm-core']")
+          test "$core" = "$pin" || { echo "Template pins add-crm-core $pin but the package is $core"; exit 1; }
+      - name: Generate a project
+        run: |
+          cp -r skills/add-crm/templates/base project
+          cd project
+          sed -e 's/{{CRM_SLUG}}/ci/; s/{{CRM_NAME}}/CI CRM/; s/{{BRAND_COLOR}}/#0176d3/; s/{{D1_DATABASE_ID}}/00000000-0000-0000-0000-000000000000/' wrangler.toml.tmpl > wrangler.toml
+          npm pkg set "dependencies.add-crm-core=file:$(ls ../tarball/*.tgz)"
+          npm install --no-audit --no-fund
+          npx add-crm migrate
+      - name: Check, bundle and apply migrations locally
+        working-directory: project
+        run: |
+          npm test
+          npx wrangler d1 migrations apply DB --local

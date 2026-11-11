@@ -22,7 +22,9 @@ skill generates for users.
   tokens, while their fonts, icons and logos carry separate, often restrictive terms. Check the current license
   before use. Default: don't depend on them.
 - **Adopted:** the SLDS **CSS only** (BSD-3-Clause), recorded in `NOTICE`. SLDS icons (CC BY-ND) and fonts are
-  not used; the template ships its own icons (`src/web/Icon.tsx`) and uses system fonts.
+  not used; the CRM ships its own icons (`packages/core/src/web/Icon.tsx`) and uses system fonts. Because `add-crm-core` is
+  redistributed on npm, its build removes every image and font reference from the design system stylesheet, so no
+  vendor image (logo, illustration, banner, avatar) or font is in the package (`packages/core/vite.config.ts`).
 - **Data model concepts** (object/field API names, ID format, relationship types, profiles/roles/sharing) follow the
   public Salesforce Object Reference. These are ideas and conventions (rule 4); all code is our own.
 - If a permissively licensed asset is adopted, add it to `NOTICE` and keep its license text.

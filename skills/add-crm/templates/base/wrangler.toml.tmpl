@@ -1,9 +1,10 @@
 name = "{{CRM_SLUG}}-crm"
-main = "src/api/index.ts"
+main = "src/worker.mjs"
 compatibility_date = "2024-12-01"
 
+# The prebuilt CRM interface ships inside the add-crm-core package.
 [assets]
-directory = "./dist"
+directory = "./node_modules/add-crm-core/dist/web"
 not_found_handling = "single-page-application"
 binding = "ASSETS"
 

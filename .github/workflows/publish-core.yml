@@ -1,0 +1,42 @@
+# Publishes packages/core to npm as add-crm-core when its version changes on main.
+# Needs the repository secret NPM_TOKEN (an npm "Automation" or granular token with publish rights).
+name: publish-core
+on:
+  push:
+    branches: [main]
+    paths: [packages/core/package.json]
+  workflow_dispatch:
+permissions:
+  contents: write
+  id-token: write # npm provenance
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Skip if this version is already on npm
+        id: check
+        run: |
+          v=$(node -p "require('./package.json').version")
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if npm view "add-crm-core@$v" version >/dev/null 2>&1; then echo "exists=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.check.outputs.exists != 'true'
+        run: npm install --no-audit --no-fund
+      - if: steps.check.outputs.exists != 'true'
+        run: npm test && npm run typecheck
+      - if: steps.check.outputs.exists != 'true'
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - if: steps.check.outputs.exists != 'true'
+        name: Tag the release
+        run: |
+          git tag "core-v${{ steps.check.outputs.version }}"
+          git push origin "core-v${{ steps.check.outputs.version }}"

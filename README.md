@@ -19,6 +19,9 @@ in a `/CRM` folder that runs on your own Cloudflare account.
 - **Salesforce-style REST API:** `/api/sobjects/{Type}/describe`, `/api/sobjects/{Type}/{Id}`, Salesforce error codes
 - Works on mobile
 - Built with Hono + React on Cloudflare Workers, with a Cloudflare D1 database
+- **Stays up to date:** the CRM is the npm package [`add-crm-core`](packages/core/README.md). Your `/CRM` folder
+  holds only your own setup (custom objects, stages, picklists), so a new version is a one-line dependency update,
+  delivered as a pull request by Dependabot or Renovate if you want
 
 ## Requirements
 - **Claude Code**
@@ -55,11 +58,17 @@ The skill will:
    In the background it looks up how similar companies set up their CRM and suggests those patterns
 3. Guide you through Cloudflare setup (see [docs/cloudflare-setup.md](skills/add-crm/docs/cloudflare-setup.md))
 4. Generate `/CRM`, run its tests, start it locally, and deploy when you approve
+5. Offer to turn on automatic CRM updates (a pull request when `add-crm-core` has a new release)
+
+## Customize and update your CRM
+Everything that's yours lives in `CRM/crm.model.mjs` ([example](skills/add-crm/docs/custom-objects.md)). After
+changing it, or after updating `add-crm-core`, run `npm run migrate` in `CRM/` and commit the new migration file.
+`npm test` tells you if one is missing. Migrations only ever add tables and columns; your data is never dropped.
 
 It never changes your existing database, secrets or code outside `/CRM` without asking first.
 
 ## Status
-Version 2 (see [CHANGELOG.md](skills/add-crm/CHANGELOG.md)). **Working:** everything under "What you get".
+Version 3 (see [CHANGELOG.md](skills/add-crm/CHANGELOG.md)). **Working:** everything under "What you get".
 
 **Not built yet:**
 - Activity links on custom objects, Change Owner, sharing rules, field-level security, SOQL
@@ -72,11 +81,17 @@ Version 2 (see [CHANGELOG.md](skills/add-crm/CHANGELOG.md)). **Working:** everyt
 Design notes and roadmap: [PLAN.md](skills/add-crm/PLAN.md).
 
 ## Develop
+The CRM lives in [`packages/core`](packages/core) (published to npm as `add-crm-core`); the skill and the
+project template are in [`skills/add-crm`](skills/add-crm).
 ```bash
-cd skills/add-crm/templates/base
+cd packages/core
 npm install
 npm test && npm run typecheck && npm run build
+npm run dev          # the CRM with the standard objects only, on http://localhost:8787
 ```
+Releasing the package: bump `version` in `packages/core/package.json`, update its `CHANGELOG.md` and the pin in
+`skills/add-crm/templates/base/package.json`, and push to `main`. The `publish-core` workflow publishes it to npm
+(needs the `NPM_TOKEN` repository secret).
 
 ## License
 [MIT](LICENSE)

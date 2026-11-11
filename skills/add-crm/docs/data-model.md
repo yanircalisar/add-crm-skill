@@ -5,8 +5,9 @@ The generated CRM follows the concepts of the Salesforce Object Reference
 system fields, relationship types and the security model. The code is our own; only the public concepts are reused
 (see `legal-and-sources.md`, rule 4).
 
-The single source of truth is `templates/base/src/api/objects.ts`. `npm run schema` generates the SQL migration
-from it, so table names equal object API names and column names equal field API names.
+The standard objects live in the `add-crm-core` package (`packages/core/src/api/objects.ts`); each project adds its
+own in `CRM/crm.model.mjs` (see `custom-objects.md`). `npm run migrate` generates the SQL migrations from both, so
+table names equal object API names and column names equal field API names.
 
 ## Record IDs
 - 18 characters: a 3-character **key prefix** (the object type), 12 characters, and a 3-character case-safe suffix.

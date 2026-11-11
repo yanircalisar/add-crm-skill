@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.0.0 — 2026-11-11
+**The CRM is now an npm package, [`add-crm-core`](../../packages/core/README.md).** A project's `/CRM` keeps only its
+model and generated migrations; CRM updates arrive as a dependency bump (Dependabot or Renovate pull request), so
+every project can stay current without regenerating code.
+- New projects: `/CRM` contains `crm.model.mjs` (custom objects, custom fields, stages, picklists, tabs),
+  `src/worker.mjs`, `wrangler.toml` and `migrations/`. The interface is prebuilt inside the package.
+- `npm run migrate` writes append-only migrations from the model; `npm test` validates the model and fails if a
+  migration is missing; `npm run deploy` applies migrations, then deploys.
+- Custom objects get their own navigation tab.
+- The skill offers to add a Dependabot (or Renovate) entry so new CRM versions arrive as pull requests.
+- Vendor images and fonts are removed from the bundled design system stylesheet; licenses are listed in
+  `packages/core/NOTICE` and `THIRD-PARTY-LICENSES.txt`.
+- **CRMs generated with 2.x keep working.** To move one to the package, run `/add-crm:add-crm` in that project and
+  choose "update": your customizations move into `crm.model.mjs` and the existing database is kept as is.
+
 ## 2.1.0 — 2026-11-11
 - Distributed as a Claude Code plugin with its own marketplace: install with
   `claude plugin marketplace add yanircalisar/add-crm-skill` then `claude plugin install add-crm@add-crm-skill`.

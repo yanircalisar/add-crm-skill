@@ -1,0 +1,12 @@
+# Keeps the CRM up to date: a pull request whenever add-crm-core has a new release.
+# /add-crm offers to add this block to the project's .github/dependabot.yml (or Renovate config) with permission.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /CRM
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: add-crm-core
+    commit-message:
+      prefix: "crm"

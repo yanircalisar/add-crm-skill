@@ -1,0 +1,73 @@
+{
+  "name": "add-crm-core",
+  "version": "1.0.0",
+  "description": "The CRM behind the add-crm Claude Code plugin: a Salesforce-style CRM (Hono API + prebuilt React UI) for Cloudflare Workers and D1. Each project keeps only its model; updates arrive as a dependency bump.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yanircalisar/add-crm-skill.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/yanircalisar/add-crm-skill/tree/main/packages/core#readme",
+  "keywords": [
+    "crm",
+    "cloudflare-workers",
+    "d1",
+    "hono",
+    "salesforce-style"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    },
+    "./migrate": {
+      "types": "./dist/server/api/migrate.d.ts",
+      "import": "./dist/server/api/migrate.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "add-crm": "bin/add-crm.mjs"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "NOTICE",
+    "LICENSE",
+    "THIRD-PARTY-LICENSES.txt",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "dev": "npm run build && node bin/add-crm.mjs migrate --migrations dev/migrations && wrangler d1 migrations apply DB --local && wrangler dev",
+    "dev:web": "vite",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && vite build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "hono": "4.6.14"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20241218.0",
+    "@salesforce-ux/design-system": "2.264.2",
+    "@types/node": "22.10.2",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.3.4",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.28.0",
+    "typescript": "5.7.2",
+    "vite": "5.4.11",
+    "vitest": "2.1.8",
+    "wrangler": "3.99.0"
+  }
+}

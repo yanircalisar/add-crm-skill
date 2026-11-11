@@ -8,7 +8,10 @@ description: Add a CRM in the style of Salesforce, HubSpot or a neutral layout (
 You are installing a CRM into an **existing, running project**. Work in phases. Never change the
 user's existing database, secrets or code outside `/CRM` without explicit permission. Never print secret values.
 
-All of this skill's files live in `${CLAUDE_SKILL_DIR}`: `templates/base` (the CRM app), `docs/` (setup guide,
+The CRM itself is the npm package **`add-crm-core`** (pinned in the template). A project's `/CRM` holds only its
+model (`crm.model.mjs`), a 3-line Worker entry, `wrangler.toml` and generated migrations, so CRM updates arrive as a
+dependency bump. All of this skill's files live in `${CLAUDE_SKILL_DIR}`: `templates/base` (the project template),
+`templates/dependabot.yml`, `docs/` (setup guide,
 data model, custom objects, legal rules), `PLAN.md` (design rationale) and `CHANGELOG.md`. Always open them through
 `${CLAUDE_SKILL_DIR}/...`, never relative to the user's project.
 The skill's version is the `version` in `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`.
@@ -129,13 +132,16 @@ yourself once they're logged in.
 
 ## Phase 5 — Generate
 1. Copy `${CLAUDE_SKILL_DIR}/templates/base` → `<root>/CRM`. Rename `wrangler.toml.tmpl` → `wrangler.toml` and fill in
-   `{{CRM_NAME}}`, `{{D1_DATABASE_ID}}`, `{{BRAND_COLOR}}`.
+   `{{CRM_SLUG}}` (lowercase project name), `{{CRM_NAME}}`, `{{D1_DATABASE_ID}}`, `{{BRAND_COLOR}}`.
+   Don't copy CRM code into the project or edit anything in `node_modules/add-crm-core`: all customization goes in
+   `crm.model.mjs`. If something can't be expressed there, say so and record it in `crm.config.json` → `todo`.
 2. Write `CRM/crm.config.json` with all interview answers (no secrets).
 3. The data model follows Salesforce (see `${CLAUDE_SKILL_DIR}/docs/data-model.md`): API names, 18-char IDs with key prefixes,
    system fields, lookup / master-detail / polymorphic relationships, profiles + roles + org-wide defaults.
-   Apply the pipeline stages to `OPPORTUNITY_STAGES` in `src/api/objects.ts` and add each accepted custom object
-   (API name `Xxx__c`, next free key prefix from `a00`, fields ending in `__c`) and its relationships to `OBJECTS`,
-   then run `npm run schema` to regenerate the migration. Lookup, master-detail and junction (many-to-many) are
+   In `CRM/crm.model.mjs` set `stages` from the interview and add each accepted custom object to `objects`
+   (API name `Xxx__c`, next free key prefix from `a00`, fields ending in `__c`), custom fields on standard objects to
+   `fields`, and picklist values to `picklists` (format and example: `${CLAUDE_SKILL_DIR}/docs/custom-objects.md`).
+   Then `npm run migrate` writes `migrations/0001_init.sql`. Lookup, master-detail and junction (many-to-many) are
    supported; activity links on custom objects are planned (see `${CLAUDE_SKILL_DIR}/docs/custom-objects.md`), so don't fake them.
    Map host roles to the seeded profiles (System Administrator, Standard User, Read Only) and role hierarchy
    (CEO → Sales Manager → Sales Rep), and ask whether any object should be Public Read Only or Public Read/Write.
@@ -147,12 +153,19 @@ yourself once they're logged in.
    For any change to an existing DB: **back it up first, show the exact SQL, wait for approval.**
 5. Optional modules: v1 ships the core only. For each chosen module, add a TODO entry in `crm.config.json` → `modules`
    and tell the user it's planned (don't fake it).
-6. `cd CRM && npm install` (exact versions are pinned), `npm test`, `npm run db:migrate:local`, `npm run dev`.
+6. `cd CRM && npm install` (exact versions are pinned), `npm run migrate`, `npm test` (validates the model and
+   bundles the Worker), then `npm run dev` (applies migrations locally and serves on http://localhost:8787).
 7. Seed the first admin: `npm run seed:admin -- <email>` (prints a one-time invite link, never a password).
+8. **Automatic updates.** Ask once: "Keep the CRM up to date automatically? You'll get a pull request when there's a
+   new version." On yes, with permission to write outside `/CRM`: add the block from
+   `${CLAUDE_SKILL_DIR}/templates/dependabot.yml` to `<root>/.github/dependabot.yml` (merge into `updates:` if the
+   file exists), or, if the repo uses Renovate, add `CRM/package.json` to its config instead. If the repo has CI,
+   suggest a job that runs `npm ci && npm test` in `CRM/` so an update that needs a migration fails until it's added.
 
 ## Phase 6 — Verify & deploy
 - Run tests; they must pass. Open the dev server and check login, a list view, a record page and the pipeline board.
-- Ask before deploying: `npm run db:migrate:remote && npm run deploy`.
+- Ask before deploying: `npm run deploy` (checks the model, applies migrations to the remote D1, deploys), then
+  `npm run seed:admin -- <email> --remote --url <deployed URL>`.
 - If a Master CRM exists (`~/.claude/crm-master/registry.json`), offer to register this CRM (Phase M step 3).
 
 ## Phase M — Master CRM (`/add-crm master`)
@@ -168,8 +181,22 @@ Until it ships, record each project CRM in `~/.claude/crm-master/registry.json`
   logos, icons, fonts, copy or code in the generated UI. Do not scrape or copy vendor docs, screenshots or UI assets.
 - Marketing automation is provider-agnostic (lists, segments, campaigns, sequences, forms) and sends through the
   user's own email provider; never send to anyone without recorded consent and a working unsubscribe.
-- **Updating an existing CRM** (`CRM/crm.config.json` has an older `skillVersion`): read the `${CLAUDE_SKILL_DIR}/CHANGELOG.md` entries in
-  between, apply template changes file by file, keep the user's own edits (show a diff for anything that conflicts),
-  and add database changes as new numbered migrations. Never rewrite an applied migration or drop data.
+- **Updating an existing CRM** (`CRM/` exists):
+  - **Package-based** (`CRM/package.json` depends on `add-crm-core`): set the version the template pins (or the
+    latest the user wants), `npm install`, `npm run migrate`, `npm test`, and summarize what changed from
+    `packages/core/CHANGELOG.md` on GitHub. Commit the new migration with the version bump. Template files outside
+    `crm.model.mjs` (scripts, `wrangler.toml` keys) change rarely; apply those from the CHANGELOG notes.
+  - **Copied template (plugin 2.x and earlier, `CRM/src/api/objects.ts` exists):** move it to the package once.
+    1. Compare its `objects.ts` with the standard objects of `add-crm-core` 1.0.0 (identical to plugin 2.x:
+       https://github.com/yanircalisar/add-crm-skill/blob/core-v1.0.0/packages/core/src/api/objects.ts, before the
+       "project model" section) and put every difference
+       (custom objects, custom fields, stages, picklist values) into a new `crm.model.mjs`. Show the user the model.
+    2. List any other edits to `CRM/src` the user made; those can't be carried over automatically, so ask.
+    3. Replace `src/`, `scripts/`, `index.html`, `vite.config.ts`, `tsconfig.json` and `package.json` with the
+       template's, keep `wrangler.toml` but change `main` and `[assets] directory` to the template's values, keep
+       `migrations/` as is.
+    4. `npm install`, then `npx add-crm migrate --baseline` (records that the existing database already matches
+       the model), then `npm test` and `npm run dev` to check the existing data shows up. Never delete migrations.
+  - Never rewrite an applied migration or drop data.
 - Write the skill's version (plugin.json) into `CRM/crm.config.json` → `skillVersion`.
 - Report at the end: what was created, which DB strategy, the mapping, pending modules, and next steps.
