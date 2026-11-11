@@ -1,19 +1,19 @@
 # add-crm-skill
 
-A [Claude Code](https://claude.com/claude-code) skill that adds a Salesforce-style CRM to a project you already have.
+A [Claude Code](https://claude.com/claude-code) skill that adds a CRM to a project (Salesforce-style, HubSpot-style or neutral, with marketing automation planned) you already have.
 Run `/add-crm` inside the project. It looks at your code and data, asks how your business works, then builds a CRM
 in a `/CRM` folder that runs on your own Cloudflare account.
 
-> Not affiliated with Salesforce. The CRM is built with the open-source [Salesforce Lightning Design System](https://www.lightningdesignsystem.com/),
-> so it looks and feels like Lightning, but it carries your own name and logo. See [NOTICE.md](NOTICE.md).
+> Not affiliated with, endorsed by or sponsored by Salesforce, HubSpot or any other vendor. All product names are
+> trademarks of their owners. The CRM follows familiar layouts but uses your own name and colors, and only public,
+> permitted material. See [docs/legal-and-sources.md](docs/legal-and-sources.md).
 
 ## What you get
 - **Records:** Leads (with conversion), Accounts, Contacts, Opportunities, Cases, Tasks, and an activity timeline
 - **Screens:** list views with search and sorting, record pages with a stage bar and related lists, a drag-and-drop
   pipeline board, and a home dashboard
 - **User management:** invite users by link, roles (Admin, Manager, Rep), per-role permissions, and reps see only their own records
-- Lightning look: app launcher, object icons, path (stage bar), highlights panel, activity timeline, kanban
-- Works on mobile
+- Works on mobile, supports dark mode
 - Built with Hono + React on Cloudflare Workers, with a Cloudflare D1 database
 
 ## Requirements
@@ -39,10 +39,11 @@ Open Claude Code in your project and type:
 ```
 /add-crm
 ```
+In a hurry? `/add-crm quick` asks only for the style, a name and your admin email.
 The skill will:
-1. Scan your project: framework, database, existing users and customers, email provider
+1. Scan your project: framework, database (schema and counts only), existing users and customers, email provider, and suggest custom objects with their links to the standard ones
 2. Ask about your business, how to use your existing data, pipeline stages, sign-in and branding.
-   In the background it looks up how similar companies set up Salesforce and suggests those patterns
+   In the background it looks up how similar companies set up their CRM and suggests those patterns
 3. Guide you through Cloudflare setup (see [docs/cloudflare-setup.md](docs/cloudflare-setup.md))
 4. Generate `/CRM`, run its tests, start it locally, and deploy when you approve
 
@@ -52,6 +53,7 @@ It never changes your existing database, secrets or code outside `/CRM` without 
 Version 1. **Working:** everything under "What you get".
 
 **Not built yet:**
+- Custom-object relationships beyond lookup (master-detail, many-to-many, activity links), see [docs/custom-objects.md](docs/custom-objects.md)
 - Optional modules: email & marketing automation, personal emails, sales insights, social media
 - Linking to or importing from your project's existing database (the skill asks the questions; generating the views/import is next)
 - Postgres support (Supabase, Neon)
