@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { api, ApiError, type Meta } from "./api";
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { api, ApiError, listUrl, type Meta } from "./api";
 import { ObjectIcon, UtilityIcon, Spinner } from "./Icon";
 import { Login, AcceptInvite } from "./pages/Auth";
 import { Home } from "./pages/Home";
@@ -12,8 +12,11 @@ import { Search } from "./pages/Search";
 
 const MetaContext = createContext<Meta | null>(null);
 export const useMeta = () => useContext(MetaContext)!;
+export const canDo = (meta: Meta, type: string, action: "createable" | "updateable" | "deletable") =>
+  !!meta.sobjects.find((s) => s.name === type)?.[action];
 
-export const NAV = ["leads", "accounts", "contacts", "opportunities", "cases", "tasks"];
+/** Objects shown as tabs in the navigation bar, in order. */
+export const NAV = ["Lead", "Account", "Contact", "Opportunity", "Case", "Task"];
 
 export function App() {
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -22,7 +25,7 @@ export function App() {
 
   const load = () => {
     setState("loading");
-    api<Meta>("/meta")
+    api<Meta>("/sobjects")
       .then((m) => {
         setMeta(m);
         setState("ready");
@@ -51,12 +54,14 @@ export function App() {
     <MetaContext.Provider value={meta}>
       <Shell onLogout={() => { setMeta(null); setState("anon"); }}>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/pipeline" element={<Pipeline />} />
-          <Route path="/setup" element={<Setup />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/o/:object" element={<ListView />} />
-          <Route path="/o/:object/:id" element={<RecordPage />} />
+          <Route path="/" element={<Navigate to="/lightning/page/home" replace />} />
+          <Route path="/lightning/page/home" element={<Home />} />
+          <Route path="/lightning/o/Opportunity/kanban" element={<Pipeline />} />
+          <Route path="/lightning/o/:type/list" element={<ListView />} />
+          <Route path="/lightning/r/:type/:id/view" element={<RecordPage />} />
+          <Route path="/lightning/r/:id" element={<RecordPage />} />
+          <Route path="/lightning/setup/:page" element={<Setup />} />
+          <Route path="/lightning/search" element={<Search />} />
           <Route path="*" element={<article className="slds-card"><div className="slds-card__body slds-card__body_inner">Page not found.</div></article>} />
         </Routes>
       </Shell>
@@ -71,6 +76,7 @@ function Shell({ children, onLogout }: { children: React.ReactNode; onLogout: ()
   const [launcher, setLauncher] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
+  const readable = (t: string) => meta.sobjects.some((s) => s.name === t);
 
   const logout = async () => {
     await api("/auth/logout", { method: "POST" }).catch(() => {});
@@ -83,10 +89,10 @@ function Shell({ children, onLogout }: { children: React.ReactNode; onLogout: ()
       <header className="slds-global-header_container">
         <div className="slds-global-header slds-grid slds-grid_align-spread">
           <div className="slds-global-header__item">
-            <div className="crm-logo" aria-hidden="true">{meta.crm.name.slice(0, 1).toUpperCase()}</div>
+            <Link to="/lightning/page/home" className="crm-logo" aria-label={`${meta.crm.name} home`}>{meta.crm.name.slice(0, 1).toUpperCase()}</Link>
           </div>
           <div className="slds-global-header__item slds-global-header__item_search">
-            <form role="search" onSubmit={(e) => { e.preventDefault(); if (q.trim()) navigate(`/search?q=${encodeURIComponent(q.trim())}`); }}>
+            <form role="search" onSubmit={(e) => { e.preventDefault(); if (q.trim()) navigate(`/lightning/search?q=${encodeURIComponent(q.trim())}`); }}>
               <div className="slds-form-element">
                 <label className="slds-assistive-text" htmlFor="global-search">Search</label>
                 <div className="slds-form-element__control slds-input-has-icon slds-input-has-icon_left">
@@ -98,22 +104,21 @@ function Shell({ children, onLogout }: { children: React.ReactNode; onLogout: ()
           </div>
           <div className="slds-global-header__item">
             <div className={`slds-dropdown-trigger slds-dropdown-trigger_click ${userMenu ? "slds-is-open" : ""}`}>
-              <button className="slds-button slds-global-actions__avatar" aria-haspopup="true" aria-expanded={userMenu} onClick={() => setUserMenu(!userMenu)} title={meta.user.name}>
+              <button className="slds-button slds-global-actions__avatar" aria-haspopup="true" aria-expanded={userMenu} onClick={() => setUserMenu(!userMenu)} title={meta.user.Name}>
                 <span className="slds-avatar slds-avatar_circle slds-avatar_medium">
-                  <abbr className="slds-avatar__initials slds-icon-standard-user" title={meta.user.name}>{initials(meta.user.name)}</abbr>
+                  <abbr className="slds-avatar__initials crm-avatar" title={meta.user.Name}>{initials(meta.user.Name)}</abbr>
                 </span>
               </button>
               {userMenu && (
                 <div className="slds-dropdown slds-dropdown_right crm-user-menu">
                   <div className="slds-p-around_small slds-border_bottom">
-                    <p className="slds-text-heading_small">{meta.user.name}</p>
-                    <p className="slds-text-body_small slds-text-color_weak">{meta.user.email}</p>
+                    <p className="slds-text-heading_small">{meta.user.Name}</p>
+                    <p className="slds-text-body_small slds-text-color_weak">{meta.user.Email}</p>
+                    <p className="slds-text-body_small slds-text-color_weak">{meta.user.ProfileName}</p>
                   </div>
                   <ul className="slds-dropdown__list" role="menu">
                     <li className="slds-dropdown__item" role="presentation">
-                      <a href="#" role="menuitem" onClick={(e) => { e.preventDefault(); logout(); }}>
-                        <span className="slds-truncate">Log Out</span>
-                      </a>
+                      <a href="#" role="menuitem" onClick={(e) => { e.preventDefault(); logout(); }}><span className="slds-truncate">Log Out</span></a>
                     </li>
                   </ul>
                 </div>
@@ -144,10 +149,12 @@ function Shell({ children, onLogout }: { children: React.ReactNode; onLogout: ()
         </div>
         <nav className={`slds-context-bar__secondary ${mobileNav ? "crm-nav-open" : ""}`} role="navigation" onClick={() => setMobileNav(false)}>
           <ul className="slds-grid">
-            <NavItem to="/" end label="Home" />
-            {NAV.filter((o) => meta.objects[o]).map((o) => <NavItem key={o} to={`/o/${o}`} label={meta.objects[o].plural} />)}
-            {meta.objects.opportunities && <NavItem to="/pipeline" label="Pipeline" />}
-            {meta.user.role_id === "admin" && <NavItem to="/setup" label="Setup" />}
+            <NavItem to="/lightning/page/home" label="Home" match="/lightning/page/home" />
+            {NAV.filter(readable).map((t) => (
+              <NavItem key={t} to={listUrl(t)} label={meta.sobjects.find((s) => s.name === t)!.labelPlural} match={`/lightning/(o|r)/${t}/`} />
+            ))}
+            {readable("Opportunity") && <NavItem to="/lightning/o/Opportunity/kanban" label="Pipeline" match="/lightning/o/Opportunity/kanban" />}
+            {meta.user.PermissionsManageUsers ? <NavItem to="/lightning/setup/ManageUsers" label="Setup" match="/lightning/setup/" /> : null}
           </ul>
         </nav>
       </div>
@@ -158,12 +165,12 @@ function Shell({ children, onLogout }: { children: React.ReactNode; onLogout: ()
   );
 }
 
-function NavItem({ to, label, end }: { to: string; label: string; end?: boolean }) {
-  const location = useLocation();
-  const active = end ? location.pathname === to : location.pathname.startsWith(to);
+function NavItem({ to, label, match }: { to: string; label: string; match: string }) {
+  const { pathname } = useLocation();
+  const active = new RegExp(`^${match}`).test(pathname) && !(match.includes("(o|r)/Opportunity") && pathname.endsWith("/kanban"));
   return (
     <li className={`slds-context-bar__item ${active ? "slds-is-active" : ""}`}>
-      <NavLink to={to} end={end} className="slds-context-bar__label-action" title={label}>
+      <NavLink to={to} className="slds-context-bar__label-action" title={label}>
         {active && <span className="slds-assistive-text">Current Page:</span>}
         <span className="slds-truncate">{label}</span>
       </NavLink>
@@ -171,7 +178,7 @@ function NavItem({ to, label, end }: { to: string; label: string; end?: boolean 
   );
 }
 
-/** Salesforce-style App Launcher: lists every object (and, later, other CRMs via the Master CRM). */
+/** App Launcher: lists every object the user can read (and, later, other CRMs via the Master CRM). */
 function AppLauncher({ onClose }: { onClose: () => void }) {
   const meta = useMeta();
   const [filter, setFilter] = useState("");
@@ -180,7 +187,7 @@ function AppLauncher({ onClose }: { onClose: () => void }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const items = Object.entries(meta.objects).filter(([, d]) => d.plural.toLowerCase().includes(filter.toLowerCase()));
+  const items = meta.sobjects.filter((s) => s.labelPlural.toLowerCase().includes(filter.toLowerCase()));
   return (
     <>
       <section role="dialog" tabIndex={-1} aria-modal="true" aria-labelledby="launcher-title" className="slds-modal slds-fade-in-open slds-modal_large slds-app-launcher">
@@ -201,11 +208,11 @@ function AppLauncher({ onClose }: { onClose: () => void }) {
           <div className="slds-modal__content slds-app-launcher__content slds-p-around_medium">
             <h3 className="slds-text-heading_small slds-m-bottom_small">All Items</h3>
             <ul className="slds-grid slds-grid_pull-padded slds-wrap">
-              {items.map(([name, def]) => (
-                <li key={name} className="slds-p-horizontal_small slds-size_1-of-2 slds-medium-size_1-of-4 slds-m-bottom_small">
-                  <Link to={`/o/${name}`} onClick={onClose} className="crm-launcher-item">
-                    <ObjectIcon object={name} />
-                    <span className="slds-m-left_small">{def.plural}</span>
+              {items.map((s) => (
+                <li key={s.name} className="slds-p-horizontal_small slds-size_1-of-2 slds-medium-size_1-of-4 slds-m-bottom_small">
+                  <Link to={listUrl(s.name)} onClick={onClose} className="crm-launcher-item">
+                    <ObjectIcon object={s.name} />
+                    <span className="slds-m-left_small">{s.labelPlural}</span>
                   </Link>
                 </li>
               ))}

@@ -4,5 +4,16 @@ MIT licensed, see LICENSE.
 Third-party assets bundled in this repository: none.
 Template dependencies (npm) are installed by users and keep their own licenses.
 
+Adopted third-party design assets (installed from npm, not copied into this repository):
+- Salesforce Lightning Design System CSS (@salesforce-ux/design-system 2.264.2)
+  https://github.com/salesforce-ux/design-system
+  License: BSD-3-Clause, Copyright (c) Salesforce.com, inc.
+  We use: the CSS stylesheet only. We do NOT use its icons (CC BY-ND 4.0) or fonts; the CRM uses its own icons
+  (templates/base/src/web/Icon.tsx) and system fonts.
+
+Data model: object names, field names, ID format and the security model follow the public concepts of the
+Salesforce Object Reference (https://developer.salesforce.com/docs/platform/object-reference/guide).
+No Salesforce code or documentation text is copied.
+
 Salesforce, HubSpot and other product names are trademarks of their respective owners. This project is not
 affiliated with, endorsed by or sponsored by them.

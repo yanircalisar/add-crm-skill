@@ -9,11 +9,15 @@ in a `/CRM` folder that runs on your own Cloudflare account.
 > permitted material. See [docs/legal-and-sources.md](docs/legal-and-sources.md).
 
 ## What you get
-- **Records:** Leads (with conversion), Accounts, Contacts, Opportunities, Cases, Tasks, and an activity timeline
-- **Screens:** list views with search and sorting, record pages with a stage bar and related lists, a drag-and-drop
-  pipeline board, and a home dashboard
-- **User management:** invite users by link, roles (Admin, Manager, Rep), per-role permissions, and reps see only their own records
-- Works on mobile, supports dark mode
+- **Salesforce data model:** standard objects and field API names (Account, Contact, Lead, Opportunity,
+  OpportunityContactRole, Case, Task, Event), 18-character IDs with key prefixes, system audit fields, lookup,
+  master-detail and polymorphic (`WhoId`/`WhatId`) relationships. See [docs/data-model.md](docs/data-model.md)
+- **Salesforce behavior:** Lead conversion, stage-driven probability and forecast, Case auto-numbers, Recycle Bin
+- **Security model:** profiles with object permissions, a role hierarchy, organization-wide sharing defaults, invite-only users
+- **Lightning-style UI** (Lightning Design System CSS, our own icons): app launcher, list views, record pages with
+  path and highlights panel, related lists, activity timeline, kanban, global search, Setup
+- **Salesforce-style REST API:** `/api/sobjects/{Type}/describe`, `/api/sobjects/{Type}/{Id}`, Salesforce error codes
+- Works on mobile
 - Built with Hono + React on Cloudflare Workers, with a Cloudflare D1 database
 
 ## Requirements
@@ -50,10 +54,10 @@ The skill will:
 It never changes your existing database, secrets or code outside `/CRM` without asking first.
 
 ## Status
-Version 1. **Working:** everything under "What you get".
+Version 2 (see [CHANGELOG.md](CHANGELOG.md)). **Working:** everything under "What you get".
 
 **Not built yet:**
-- Custom-object relationships beyond lookup (master-detail, many-to-many, activity links), see [docs/custom-objects.md](docs/custom-objects.md)
+- Activity links on custom objects, Change Owner, sharing rules, field-level security, SOQL
 - Optional modules: email & marketing automation, personal emails, sales insights, social media
 - Linking to or importing from your project's existing database (the skill asks the questions; generating the views/import is next)
 - Postgres support (Supabase, Neon)

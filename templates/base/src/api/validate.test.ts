@@ -1,48 +1,76 @@
 import { describe, expect, it } from "vitest";
 import { validateRecord } from "./validate";
-import { OBJECTS, getObject } from "./objects";
+import { getObject, childRelationships, objectForId, OBJECTS } from "./objects";
+import { newId } from "./ids";
 
-const opp = OBJECTS.opportunities;
-const leads = OBJECTS.leads;
+const Opportunity = getObject("Opportunity")!;
+const Contact = getObject("Contact")!;
+const Task = getObject("Task")!;
+const codes = (r: { errors: { errorCode: string; fields: string[] }[] }) => r.errors.map((e) => `${e.fields[0]}:${e.errorCode}`);
 
 describe("validateRecord", () => {
-  it("requires required fields on create", () => {
-    const { errors } = validateRecord(opp, {});
-    expect(errors.name).toBeDefined();
-    expect(errors.stage).toBeDefined();
+  it("reports missing required fields with REQUIRED_FIELD_MISSING", () => {
+    expect(codes(validateRecord(Opportunity, {}, "create"))).toEqual(
+      expect.arrayContaining(["Name:REQUIRED_FIELD_MISSING", "StageName:REQUIRED_FIELD_MISSING", "CloseDate:REQUIRED_FIELD_MISSING"]),
+    );
   });
-  it("does not require missing fields on partial update", () => {
-    expect(validateRecord(opp, { amount: 5 }, true).errors).toEqual({});
+  it("allows partial updates", () => {
+    expect(validateRecord(Opportunity, { Amount: 5 }, "update").errors).toEqual([]);
   });
-  it("drops unknown fields so they never reach SQL", () => {
-    const { values } = validateRecord(leads, { last_name: "Doe", owner_id: "x", "id; DROP TABLE": 1 });
-    expect(values).toEqual({ last_name: "Doe" });
+  it("rejects unknown and system fields so they never reach SQL", () => {
+    const r = validateRecord(Contact, { LastName: "Doe", OwnerId: newId("005"), Id: "x", "Name; DROP": 1 }, "create");
+    expect(codes(r)).toEqual(["OwnerId:INVALID_FIELD_FOR_INSERT_UPDATE", "Id:INVALID_FIELD_FOR_INSERT_UPDATE", "Name; DROP:INVALID_FIELD_FOR_INSERT_UPDATE"]);
+    expect(r.values).toEqual({ LastName: "Doe" });
   });
-  it("coerces numbers and rejects non-numbers", () => {
-    expect(validateRecord(opp, { amount: "1200.5" }, true).values.amount).toBe(1200.5);
-    expect(validateRecord(opp, { amount: "abc" }, true).errors.amount).toBeDefined();
+  it("rejects calculated fields like Contact.Name", () => {
+    expect(codes(validateRecord(Contact, { Name: "x", LastName: "y" }, "create"))).toEqual(["Name:INVALID_FIELD_FOR_INSERT_UPDATE"]);
   });
-  it("validates email, date, url and picklist", () => {
-    expect(validateRecord(leads, { email: "nope" }, true).errors.email).toBeDefined();
-    expect(validateRecord(opp, { close_date: "12/01/2025" }, true).errors.close_date).toBeDefined();
-    expect(validateRecord(OBJECTS.accounts, { website: "javascript:alert(1)" }, true).errors.website).toBeDefined();
-    expect(validateRecord(opp, { stage: "Made Up" }, true).errors.stage).toBeDefined();
+  it("validates picklists, numbers, dates, emails and URLs", () => {
+    expect(codes(validateRecord(Opportunity, { StageName: "Made Up" }, "update"))).toEqual(["StageName:INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST"]);
+    expect(codes(validateRecord(Opportunity, { Amount: "abc" }, "update"))).toEqual(["Amount:INVALID_TYPE_ON_FIELD_IN_RECORD"]);
+    expect(codes(validateRecord(Opportunity, { Probability: 120 }, "update"))).toEqual(["Probability:NUMBER_OUTSIDE_VALID_RANGE"]);
+    expect(codes(validateRecord(Opportunity, { CloseDate: "12/01/2026" }, "update"))).toEqual(["CloseDate:INVALID_TYPE_ON_FIELD_IN_RECORD"]);
+    expect(codes(validateRecord(Contact, { Email: "nope" }, "update"))).toEqual(["Email:INVALID_EMAIL_ADDRESS"]);
+    expect(codes(validateRecord(getObject("Account")!, { Website: "javascript:alert(1)" }, "update"))).toEqual(["Website:INVALID_TYPE_ON_FIELD_IN_RECORD"]);
   });
-  it("clears optional fields set to empty", () => {
-    expect(validateRecord(leads, { email: "" }, true).values.email).toBeNull();
+  it("coerces numbers and booleans", () => {
+    expect(validateRecord(Opportunity, { Amount: "1200.5" }, "update").values.Amount).toBe(1200.5);
+    expect(validateRecord(getObject("OpportunityContactRole")!, { IsPrimary: true }, "update").values.IsPrimary).toBe(1);
   });
-  it("rejects clearing required fields", () => {
-    expect(validateRecord(leads, { last_name: "  " }, true).errors.last_name).toBeDefined();
+  it("checks reference IDs by key prefix, including polymorphic WhoId/WhatId", () => {
+    expect(validateRecord(Contact, { AccountId: newId("001") }, "update").errors).toEqual([]);
+    expect(codes(validateRecord(Contact, { AccountId: newId("006") }, "update"))).toEqual(["AccountId:FIELD_INTEGRITY_EXCEPTION"]);
+    expect(codes(validateRecord(Contact, { AccountId: "bad" }, "update"))).toEqual(["AccountId:MALFORMED_ID"]);
+    expect(validateRecord(Task, { WhoId: newId("00Q"), WhatId: newId("006") }, "update").errors).toEqual([]);
+    expect(codes(validateRecord(Task, { WhoId: newId("001") }, "update"))).toEqual(["WhoId:FIELD_INTEGRITY_EXCEPTION"]);
   });
-  it("rejects over-long text", () => {
-    expect(validateRecord(leads, { company: "x".repeat(300) }, true).errors.company).toBeDefined();
+  it("normalizes 15-char reference IDs to 18", () => {
+    const id18 = newId("001");
+    expect(validateRecord(Contact, { AccountId: id18.slice(0, 15) }, "update").values.AccountId).toBe(id18);
+  });
+  it("rejects too-long strings and clears optional fields", () => {
+    expect(codes(validateRecord(Contact, { Title: "x".repeat(300) }, "update"))).toEqual(["Title:STRING_TOO_LONG"]);
+    expect(validateRecord(Contact, { Email: "" }, "update").values.Email).toBeNull();
   });
 });
 
-describe("getObject", () => {
-  it("returns known objects only, not prototype keys", () => {
-    expect(getObject("leads")?.table).toBe("leads");
+describe("object registry", () => {
+  it("has unique key prefixes", () => {
+    const prefixes = Object.values(OBJECTS).map((o) => o.keyPrefix);
+    expect(new Set(prefixes).size).toBe(prefixes.length);
+  });
+  it("resolves the object type from an ID", () => {
+    expect(objectForId(newId("500"))?.name).toBe("Case");
+    expect(objectForId("zzz000000000000AAA")).toBeNull();
+  });
+  it("derives child relationships, with cascade delete for master-detail", () => {
+    const rels = childRelationships("Opportunity");
+    expect(rels).toContainEqual(expect.objectContaining({ childSObject: "OpportunityContactRole", field: "OpportunityId", cascadeDelete: true }));
+    expect(childRelationships("Account").map((r) => r.childSObject)).toEqual(expect.arrayContaining(["Contact", "Opportunity", "Case", "Account"]));
+    // Lead conversion fields are read-only, so they don't create related lists
+    expect(childRelationships("Account").some((r) => r.childSObject === "Lead")).toBe(false);
+  });
+  it("does not resolve prototype keys", () => {
     expect(getObject("constructor")).toBeNull();
-    expect(getObject("users")).toBeNull();
   });
 });

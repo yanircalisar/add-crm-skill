@@ -17,6 +17,10 @@ discovery or the defaults below, then show the full set of choices once for a si
 The goal is a working CRM in a few minutes, so ask as little as possible and never ask what discovery can answer.
 
 ## Phase 0 — Preconditions
+0. **Check for a newer skill version.** If this skill's folder is a git clone, run
+   `git -C <skill dir> fetch --quiet` and compare `VERSION` with `git -C <skill dir> show origin/main:VERSION`.
+   If newer, show the matching `CHANGELOG.md` entries and offer to update (`git -C <skill dir> pull --ff-only`)
+   before continuing. Never update without asking.
 1. Find the project root (git root). If `<root>/CRM` exists, read `CRM/crm.config.json` and ask:
    update the existing CRM / add modules / abort. Never overwrite silently.
 2. Make sure work happens on a feature branch, not `main`/`dev`, following the repo's rules.
@@ -123,9 +127,14 @@ yourself once they're logged in.
 1. Copy `templates/base` → `<root>/CRM`. Rename `wrangler.toml.tmpl` → `wrangler.toml` and fill in
    `{{CRM_NAME}}`, `{{D1_DATABASE_ID}}`, `{{BRAND_COLOR}}`.
 2. Write `CRM/crm.config.json` with all interview answers (no secrets).
-3. Apply the pipeline stages to `src/api/objects.ts` (`STAGES`) and add each accepted custom object and its
-   relationships to `OBJECTS` plus a migration. Only lookup is supported by the v1 template; for the other relationship
-   types tell the user they are planned (see `docs/custom-objects.md`) and don't fake them.
+3. The data model follows Salesforce (see `docs/data-model.md`): API names, 18-char IDs with key prefixes,
+   system fields, lookup / master-detail / polymorphic relationships, profiles + roles + org-wide defaults.
+   Apply the pipeline stages to `OPPORTUNITY_STAGES` in `src/api/objects.ts` and add each accepted custom object
+   (API name `Xxx__c`, next free key prefix from `a00`, fields ending in `__c`) and its relationships to `OBJECTS`,
+   then run `npm run schema` to regenerate the migration. Lookup, master-detail and junction (many-to-many) are
+   supported; activity links on custom objects are planned (see `docs/custom-objects.md`), so don't fake them.
+   Map host roles to the seeded profiles (System Administrator, Standard User, Read Only) and role hierarchy
+   (CEO → Sales Manager → Sales Rep), and ask whether any object should be Public Read Only or Public Read/Write.
 4. Data mapping:
    - **Separate DB:** write an import script `CRM/scripts/import-from-host.ts` (idempotent, upserts by `external_id`).
    - **Existing DB, new tables:** generate migrations that create the `crm_` tables in the host DB and SQL **views**
@@ -155,4 +164,8 @@ Until it ships, record each project CRM in `~/.claude/crm-master/registry.json`
   logos, icons, fonts, copy or code in the generated UI. Do not scrape or copy vendor docs, screenshots or UI assets.
 - Marketing automation is provider-agnostic (lists, segments, campaigns, sequences, forms) and sends through the
   user's own email provider; never send to anyone without recorded consent and a working unsubscribe.
+- **Updating an existing CRM** (`CRM/crm.config.json` has an older `skillVersion`): read the CHANGELOG entries in
+  between, apply template changes file by file, keep the user's own edits (show a diff for anything that conflicts),
+  and add database changes as new numbered migrations. Never rewrite an applied migration or drop data.
+- Write the skill's `VERSION` into `CRM/crm.config.json` → `skillVersion`.
 - Report at the end: what was created, which DB strategy, the mapping, pending modules, and next steps.

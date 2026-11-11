@@ -113,3 +113,13 @@ body { min-height: 100vh; }
   .crm-table td[data-label]::before { content: attr(data-label); color: #706e6b; font-size: .75rem; }
   .slds-table_fixed-layout { table-layout: auto; }
 }
+
+/* Our own icons: colored tiles with white glyphs */
+.crm-icon { display: inline-flex; border-radius: .25rem; line-height: 0; }
+.crm-icon .slds-icon { fill: #fff; padding: 15%; }
+.crm-avatar { background: #65cae4; color: #fff; }
+.crm-kanban__header_won { border-top: 3px solid #2e844a; }
+.crm-kanban__header_lost { border-top: 3px solid #ba0517; }
+.crm-converted { justify-content: flex-start; }
+.crm-readonly-checkbox input { position: absolute; opacity: 0; }
+.slds-timeline__item_expandable .slds-media__body { padding-left: .5rem; }

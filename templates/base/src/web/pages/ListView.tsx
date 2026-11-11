@@ -1,47 +1,48 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { api, formatValue, type ObjectDef } from "../api";
-import { useMeta } from "../App";
+import { api, fieldOf, recordUrl, useDescribe, type Names, type SRecord } from "../api";
 import { ObjectIcon, UtilityIcon, ErrorAlert } from "../Icon";
+import { FieldValue } from "../components";
 import { RecordForm } from "./RecordForm";
 
 const PAGE = 50;
+const VIEWS: Record<string, string> = { all: "All", mine: "My", open: "Open" };
 
-/** Object home: page header with list view picker + data table, as in Lightning. */
+/** Object home: page header with list view picker + data table. URL: /lightning/o/{Type}/list */
 export function ListView() {
-  const { object = "" } = useParams();
-  const meta = useMeta();
-  const def: ObjectDef | undefined = meta.objects[object];
+  const { type = "" } = useParams();
+  const { d, error: describeError } = useDescribe(type);
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
-  const scope = params.get("scope") ?? "all";
-  const sort = params.get("sort") ?? "updated_at";
+  const scope = params.get("filterName") ?? "all";
+  const sort = params.get("sort") ?? "LastModifiedDate";
   const dir = params.get("dir") ?? "desc";
   const offset = Number(params.get("offset") ?? 0);
-  const [data, setData] = useState<{ records: any[]; total: number } | null>(null);
+  const [data, setData] = useState<{ records: SRecord[]; totalSize: number; names: Names } | null>(null);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState(q);
   const [reload, setReload] = useState(0);
 
-  const canCreate = meta.permissions.find((p) => p.object === object)?.can_create;
-
   useEffect(() => {
     setSearch(q);
-    if (!def) return;
+    if (!d) return;
     setData(null);
     setError("");
     const qs = new URLSearchParams({ q, scope, sort, dir, limit: String(PAGE), offset: String(offset) });
-    api(`/o/${object}?${qs}`).then(setData).catch((e) => setError(e.message));
-  }, [object, q, scope, sort, dir, offset, reload]);
+    const field = params.get("field");
+    if (field) { qs.set("field", field); qs.set("value", params.get("value") ?? ""); }
+    api(`/sobjects/${type}?${qs}`).then(setData).catch((e) => setError(e.message));
+  }, [d, q, scope, sort, dir, offset, reload]);
 
-  if (!def) return <article className="slds-card"><div className="slds-card__body slds-card__body_inner">You don't have access to this object.</div></article>;
+  if (describeError) return <ErrorAlert message="You don't have access to this object, or it doesn't exist." />;
+  if (!d) return <div className="slds-page-header"><span className="crm-skeleton" /></div>;
 
   const set = (patch: Record<string, string>) => setParams((p) => { const n = new URLSearchParams(p); for (const [k, v] of Object.entries(patch)) n.set(k, v); return n; });
   const toggleSort = (f: string) => set({ sort: f, dir: sort === f && dir === "asc" ? "desc" : "asc", offset: "0" });
-  const fieldOf = (name: string) => def.fields.find((f) => f.name === name);
-  const viewName = scope === "mine" ? `My ${def.plural}` : `All ${def.plural}`;
+  const viewName = `${VIEWS[scope] ?? "All"} ${d.labelPlural}`;
+  const hasOpen = d.fields.some((f) => f.name === "IsClosed") || d.name === "Lead";
 
   return (
     <div className="crm-list">
@@ -49,17 +50,18 @@ export function ListView() {
         <div className="slds-page-header__row">
           <div className="slds-page-header__col-title">
             <div className="slds-media">
-              <div className="slds-media__figure"><ObjectIcon object={object} size="medium" /></div>
+              <div className="slds-media__figure"><ObjectIcon object={d.name} size="medium" /></div>
               <div className="slds-media__body">
                 <div className="slds-page-header__name">
                   <div className="slds-page-header__name-title">
                     <h1>
-                      <span>{def.plural}</span>
+                      <span>{d.labelPlural}</span>
                       <label className="slds-assistive-text" htmlFor="view-picker">List view</label>
                       <span className="crm-view-picker">
-                        <select id="view-picker" className="slds-page-header__title slds-truncate" value={scope} onChange={(e) => set({ scope: e.target.value, offset: "0" })}>
-                          <option value="all">All {def.plural}</option>
-                          <option value="mine">My {def.plural}</option>
+                        <select id="view-picker" className="slds-page-header__title slds-truncate" value={scope} onChange={(e) => set({ filterName: e.target.value, offset: "0" })}>
+                          <option value="all">All {d.labelPlural}</option>
+                          <option value="mine">My {d.labelPlural}</option>
+                          {hasOpen && <option value="open">Open {d.labelPlural}</option>}
                         </select>
                         <UtilityIcon name="down" className="slds-icon slds-icon_x-small slds-icon-text-default" />
                       </span>
@@ -71,18 +73,18 @@ export function ListView() {
           </div>
           <div className="slds-page-header__col-actions">
             <div className="slds-page-header__controls">
-              {canCreate ? (
+              {d.createable && (
                 <div className="slds-page-header__control">
                   <button className="slds-button slds-button_neutral" onClick={() => setCreating(true)}>New</button>
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
         </div>
         <div className="slds-page-header__row">
           <div className="slds-page-header__col-meta">
             <p className="slds-page-header__meta-text" aria-live="polite">
-              {data ? `${data.total} item${data.total === 1 ? "" : "s"} • Sorted by ${fieldOf(sort)?.label ?? "Last Modified"} • ${viewName}` : "Loading…"}
+              {data ? `${data.totalSize} item${data.totalSize === 1 ? "" : "s"} • Sorted by ${fieldOf(d, sort)?.label ?? "Last Modified Date"} • ${viewName}` : "Loading…"}
             </p>
           </div>
           <div className="slds-page-header__col-controls">
@@ -113,14 +115,12 @@ export function ListView() {
         <table className="slds-table slds-table_cell-buffer slds-table_bordered slds-table_fixed-layout crm-table" aria-label={viewName}>
           <thead>
             <tr className="slds-line-height_reset">
-              {def.listFields.map((f) => (
+              {d.listFields.map((f) => (
                 <th key={f} scope="col" className={`slds-is-sortable ${sort === f ? "slds-is-sorted" : ""} ${sort === f && dir === "asc" ? "slds-is-sorted_asc" : ""}`}
                   aria-sort={sort === f ? (dir === "asc" ? "ascending" : "descending") : "none"}>
                   <a href="#" className="slds-th__action slds-text-link_reset" role="button" onClick={(e) => { e.preventDefault(); toggleSort(f); }}>
-                    <span className="slds-truncate" title={fieldOf(f)?.label}>{fieldOf(f)?.label ?? f}</span>
-                    <span className="slds-icon_container slds-icon-utility-arrowdown">
-                      <UtilityIcon name="arrowdown" className="slds-icon slds-icon-text-default slds-is-sortable__icon" />
-                    </span>
+                    <span className="slds-truncate" title={fieldOf(d, f)?.label}>{fieldOf(d, f)?.label ?? f}</span>
+                    <span className="slds-icon_container"><UtilityIcon name="arrowdown" className="slds-icon slds-icon-text-default slds-is-sortable__icon" /></span>
                   </a>
                 </th>
               ))}
@@ -128,41 +128,38 @@ export function ListView() {
           </thead>
           <tbody>
             {!data && !error && Array.from({ length: 6 }).map((_, i) => (
-              <tr key={i}>{def.listFields.map((f) => <td key={f}><span className="crm-skeleton" /></td>)}</tr>
+              <tr key={i}>{d.listFields.map((f) => <td key={f}><span className="crm-skeleton" /></td>)}</tr>
             ))}
             {data?.records.length === 0 && (
-              <tr><td colSpan={def.listFields.length}>
-                <div className="slds-illustration slds-illustration_small slds-p-around_large slds-text-align_center">
+              <tr><td colSpan={d.listFields.length}>
+                <div className="slds-p-around_large slds-text-align_center">
                   <h3 className="slds-text-heading_medium">No items to display</h3>
-                  {canCreate ? <p className="slds-text-body_regular slds-m-top_x-small">Click <strong>New</strong> to add a {def.label.toLowerCase()}.</p> : null}
+                  {d.createable && <p className="slds-m-top_x-small">Click <strong>New</strong> to add a {d.label.toLowerCase()}.</p>}
                 </div>
               </td></tr>
             )}
             {data?.records.map((r) => (
-              <tr key={r.id} className="slds-hint-parent">
-                {def.listFields.map((f, i) => {
-                  const text = formatValue(fieldOf(f), r[f]);
-                  return (
-                    <td key={f} data-label={fieldOf(f)?.label ?? f}>
-                      <div className="slds-truncate" title={text}>
-                        {i === 0 ? <Link to={`/o/${object}/${r.id}`}>{text || "(no value)"}</Link> : text}
-                      </div>
-                    </td>
-                  );
-                })}
+              <tr key={r.Id} className="slds-hint-parent">
+                {d.listFields.map((f, i) => (
+                  <td key={f} data-label={fieldOf(d, f)?.label ?? f}>
+                    <div className="slds-truncate">
+                      {i === 0 ? <Link to={recordUrl(d.name, r.Id)}>{String(r[f] ?? "") || "(no name)"}</Link> : <FieldValue field={fieldOf(d, f)} value={r[f]} names={data.names} />}
+                    </div>
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {data && data.total > PAGE && (
+      {data && data.totalSize > PAGE && (
         <div className="slds-grid slds-grid_align-center slds-grid_vertical-align-center slds-p-around_small crm-pager">
           <button className="slds-button slds-button_neutral" disabled={offset === 0} onClick={() => set({ offset: String(Math.max(offset - PAGE, 0)) })}>Previous</button>
-          <span className="slds-text-body_small slds-m-horizontal_medium">{offset + 1}–{Math.min(offset + PAGE, data.total)} of {data.total}</span>
-          <button className="slds-button slds-button_neutral" disabled={offset + PAGE >= data.total} onClick={() => set({ offset: String(offset + PAGE) })}>Next</button>
+          <span className="slds-text-body_small slds-m-horizontal_medium">{offset + 1}–{Math.min(offset + PAGE, data.totalSize)} of {data.totalSize}</span>
+          <button className="slds-button slds-button_neutral" disabled={offset + PAGE >= data.totalSize} onClick={() => set({ offset: String(offset + PAGE) })}>Next</button>
         </div>
       )}
-      {creating && <RecordForm object={object} def={def} onClose={() => setCreating(false)} onSaved={(id) => navigate(`/o/${object}/${id}`)} />}
+      {creating && <RecordForm describe={d} onClose={() => setCreating(false)} onSaved={(id) => navigate(recordUrl(d.name, id))} />}
     </div>
   );
 }

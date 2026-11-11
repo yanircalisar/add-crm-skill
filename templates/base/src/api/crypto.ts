@@ -40,4 +40,3 @@ export async function sha256(input: string): Promise<string> {
   return toHex(await crypto.subtle.digest("SHA-256", enc.encode(input)));
 }
 
-export const newId = () => crypto.randomUUID();

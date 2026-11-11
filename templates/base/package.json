@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
-    "seed:admin": "node scripts/seed-admin.mjs"
+    "seed:admin": "node scripts/seed-admin.mjs",
+    "schema": "vite-node scripts/gen-schema.ts"
   },
   "dependencies": {
     "@salesforce-ux/design-system": "2.264.2",
@@ -27,6 +28,7 @@
     "@vitejs/plugin-react": "4.3.4",
     "typescript": "5.7.2",
     "vite": "5.4.11",
+    "vite-node": "2.1.8",
     "vitest": "2.1.8",
     "wrangler": "3.99.0"
   }

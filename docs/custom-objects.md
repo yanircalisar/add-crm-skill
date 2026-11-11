@@ -39,16 +39,22 @@ low-cardinality columns), relationship and parent. The user accepts, edits or re
 ## 5. Config shape (`CRM/crm.config.json`)
 ```json
 {
-  "customObjects": [{ "key": "subscriptions", "label": "Subscription", "source": "subscriptions", "fields": [] }],
-  "relationships": [{ "from": "subscriptions", "to": "accounts", "type": "lookup", "field": "account_id" }]
+  "customObjects": [{ "name": "Subscription__c", "label": "Subscription", "keyPrefix": "a00", "source": "subscriptions", "fields": [] }],
+  "relationships": [{ "from": "Subscription__c", "to": "Account", "type": "lookup", "field": "Account__c" }]
 }
 ```
 `type` is one of `lookup`, `master-detail`, `many-to-many`, `activity`.
 
 ## Template support
-- **Available now:** custom objects via the object registry, and lookup relationships with related lists.
-- **Planned:** master-detail (cascade delete, inherited sharing), junction objects for many-to-many, and
-  activity links on custom objects. The skill must say so and not fake them.
+- **Available now:** custom objects via the object registry (`src/api/objects.ts`), lookup relationships,
+  master-detail (`cascadeDelete: true`, `ownerable: false`, `defaultSharing: "ControlledByParent"`: cascade delete
+  and restore, inherited access), and many-to-many through a junction object with two master-detail fields
+  (`OpportunityContactRole` is the built-in example). Related lists appear automatically.
+- **Planned:** activity links (`WhoId`/`WhatId`) to custom objects. The skill must say so and not fake them.
+- **Naming:** follow `docs/data-model.md`: API names end in `__c` (`Subscription__c`, `Plan__c`), reference fields
+  end in `__c` too (`Account__c`), and each custom object gets the next free key prefix from `a00`.
+  After editing the registry run `npm run schema` for a fresh CRM, or add a new numbered migration for one
+  that is already deployed (never edit an applied migration).
 
 ## Privacy
 The scan reads schema and aggregate counts only. No raw rows, and personal or secret-looking columns are only noted
